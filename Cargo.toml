@@ -1,0 +1,12 @@
+[package]
+name = "stewart-platform"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+env_logger = "0.11.3"
+ethercrab = { git = "https://github.com/ethercrab-rs/ethercrab.git", version = "0.4.0-rc.1" }
+log = "0.4.21"
+tokio = { version = "1.36.0", features = ["time", "macros", "rt-multi-thread"] }
