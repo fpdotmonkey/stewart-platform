@@ -14,6 +14,7 @@
 //! $env:RUST_LOG="debug" ; cargo run --example ek1100 --release -- '\Device\NPF_{FF0ACEE6-E8CD-48D5-A399-619CD2340465}'
 //! ```
 
+use bitvec::prelude::*;
 use env_logger::Env;
 use ethercrab::{
     error::Error,
@@ -38,9 +39,13 @@ static PDU_STORAGE: PduStorage<MAX_FRAMES, MAX_PDU_DATA> = PduStorage::new();
 async fn main() -> Result<(), Error> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
-    let interface = std::env::args()
-        .nth(1)
-        .expect("Provide network interface as first argument.");
+    let interface: String = match std::env::args().nth(1) {
+        Some(arg) => arg,
+        None => {
+            eprintln!("provide a network device as the first argument");
+            return Err(Error::Internal);
+        }
+    };
 
     log::info!("Starting EK1100/EK1501 demo...");
     log::info!(
@@ -98,29 +103,44 @@ async fn main() -> Result<(), Error> {
         );
     }
 
-    let mut tick_interval = tokio::time::interval(Duration::from_millis(100));
+    let mut tick_interval = tokio::time::interval(Duration::from_millis(10));
     tick_interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
-    let mut current_bit = 0b01;
+    let channel1 = bits("Flet");
+    let mut channel1_cursor = 0;
+    let channel2 = bits("cher");
+    let mut channel2_cursor = 0;
     loop {
         group.tx_rx(&client).await.expect("TX/RX");
+        let channel1_bit = if channel1[channel1_cursor] {
+            0b01
+        } else {
+            0b00
+        };
+        let channel2_bit = if channel2[channel2_cursor] {
+            0b10
+        } else {
+            0b00
+        };
+        let out_word = channel1_bit | channel2_bit;
+        channel1_cursor = (channel1_cursor + 1) % channel1.len();
+        channel2_cursor = (channel2_cursor + 1) % channel2.len();
 
         // Increment every output byte for every slave device by one
         for mut slave in group.iter(&client) {
             match slave.name() {
                 "EL2042" => {
                     let (_, out) = slave.io_raw_mut();
-                    let valve_out = &mut out[0];
-                    *valve_out ^= current_bit;
-                    if current_bit == 0b01 {
-                        current_bit = 0b10;
-                    } else {
-                        current_bit = 0b01;
-                    }
-                },
-                &_ => ()
+                    let out = &mut out[0];
+                    *out = out_word;
+                }
+                &_ => (),
             }
         }
         tick_interval.tick().await;
     }
+}
+
+fn bits(string: &str) -> &BitSlice<u8> {
+    string.as_bytes().view_bits::<Lsb0>()
 }
