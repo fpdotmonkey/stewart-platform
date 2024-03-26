@@ -14,7 +14,6 @@
 //! $env:RUST_LOG="debug" ; cargo run --example ek1100 --release -- '\Device\NPF_{FF0ACEE6-E8CD-48D5-A399-619CD2340465}'
 //! ```
 
-use bitvec::prelude::*;
 use env_logger::Env;
 use ethercrab::{
     error::Error,
@@ -103,28 +102,20 @@ async fn main() -> Result<(), Error> {
         );
     }
 
-    let mut tick_interval = tokio::time::interval(Duration::from_millis(10));
+    let mut tick_interval = tokio::time::interval(Duration::from_millis(100));
     tick_interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
-    let channel1 = bits("Flet");
-    let mut channel1_cursor = 0;
-    let channel2 = bits("cher");
-    let mut channel2_cursor = 0;
+    let input_ready: std::sync::Arc<std::sync::Mutex<bool>> =
+        std::sync::Arc::new(std::sync::Mutex::new(false));
+    spawn_interactive_tty_channel(input_ready.clone());
+    let mut out_word = 0b10;
     loop {
         group.tx_rx(&client).await.expect("TX/RX");
-        let channel1_bit = if channel1[channel1_cursor] {
-            0b01
-        } else {
-            0b00
+
+        if *input_ready.lock().unwrap() {
+            *input_ready.lock().unwrap() = false;
+            out_word ^= 0b11;
         };
-        let channel2_bit = if channel2[channel2_cursor] {
-            0b10
-        } else {
-            0b00
-        };
-        let out_word = channel1_bit | channel2_bit;
-        channel1_cursor = (channel1_cursor + 1) % channel1.len();
-        channel2_cursor = (channel2_cursor + 1) % channel2.len();
 
         // Increment every output byte for every slave device by one
         for mut slave in group.iter(&client) {
@@ -141,6 +132,11 @@ async fn main() -> Result<(), Error> {
     }
 }
 
-fn bits(string: &str) -> &BitSlice<u8> {
-    string.as_bytes().view_bits::<Lsb0>()
+fn spawn_interactive_tty_channel(input_ready: std::sync::Arc<std::sync::Mutex<bool>>) {
+    std::thread::spawn(move || loop {
+        let mut buffer = String::new();
+        std::io::stdin().read_line(&mut buffer).unwrap();
+        *input_ready.lock().unwrap() = true;
+        print!("\r"); // VT100 magic to clear the previous line
+    });
 }
