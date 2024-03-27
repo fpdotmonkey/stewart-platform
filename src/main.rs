@@ -102,7 +102,7 @@ async fn main() -> Result<(), Error> {
         );
     }
 
-    let mut tick_interval = tokio::time::interval(Duration::from_millis(100));
+    let mut tick_interval = tokio::time::interval(Duration::from_millis(10));
     tick_interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
     let input_ready: std::sync::Arc<std::sync::Mutex<bool>> =
