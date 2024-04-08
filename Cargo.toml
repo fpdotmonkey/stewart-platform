@@ -8,6 +8,10 @@ edition = "2021"
 [dependencies]
 bitvec = "1.0.1"
 env_logger = "0.11.3"
-ethercrab = { git = "https://github.com/ethercrab-rs/ethercrab.git", version = "0.4.0-rc.1" }
+ethercrab = "0.4.1"
+ethercrab-wire = "0.1.4"
+ethercrab-wire-derive = "0.1.4"
+float-cmp = "0.9.0"
 log = "0.4.21"
+signal-hook = "0.3.17"
 tokio = { version = "1.36.0", features = ["time", "macros", "rt-multi-thread"] }
