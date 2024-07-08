@@ -20,8 +20,9 @@ use env_logger::Env;
 use ethercrab::{
     error::Error,
     std::{ethercat_now, tx_rx_task},
-    Client, ClientConfig, EtherCrabWireRead, PduStorage, Timeouts,
+    Client, ClientConfig, PduStorage, Timeouts,
 };
+use ethercrab_wire::EtherCrabWireRead;
 use tokio::time::MissedTickBehavior;
 
 mod controller;
